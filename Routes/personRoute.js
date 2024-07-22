@@ -3,9 +3,10 @@ const bodyParser=require("body-parser");
 const router=express.Router();
 const {Person}=require('../Models/Person');
 router.use(bodyParser.json());
+const {jwtMiddleWare,generateToken} =require('../jwt');
 
 
-router.get('/',async(req,res)=>{
+router.get('/',jwtMiddleWare,async(req,res)=>{
     try {
         const data= await Person.find();
         res.status(200).json(data);
@@ -15,19 +16,41 @@ router.get('/',async(req,res)=>{
         res.status(500).json({error:"internal server error"});        
     }
 })
+// we can acces the user data from token beacuse token give the payload and inside that payload it contain user id and username so on basis of userid and username we can find tha user data from database
 
-router.post('/',async(req,res)=>{
+router.get('/profile',jwtMiddleWare,async(req,res)=>{
+    try 
+    {
+        const userData=req.userPayLoad.id;
+        const user=await Person.findById(userData);
+        res.status(200).json({user});
+        
+    } 
+    catch (error)
+    {
+        console.log(error);
+        res.status(500).json({error:"server side error"});
+    }
+
+})
+
+router.post('/signup',async(req,res)=>{
     try {
         const data=req.body;
         const newPerson=new Person(data);
         const response= await newPerson.save();
-        res.status(200).json(response);
+        const payload={
+            id:response.id,
+            username:response.username
+        }
+        const token = generateToken(payload);
+        console.log(token); 
+        res.status(200).json({response:response,token:token});
     } 
     catch (error) 
     {
         console.log(error);
         res.status(500).json({error:"server side error"});
-    
     }
 })
 
